@@ -76,6 +76,54 @@ All routes are mounted at `/api/v1/`:
 
 The application uses hardcoded development defaults in `AppConfig`. For production, these should be externalized to environment variables or a config file.
 
+## Code Review with Claude Code
+
+This repository uses Claude Code for AI-powered code reviews.
+
+### Prerequisites
+Install Claude Code: https://code.claude.com
+
+### Running a Review
+
+```bash
+# Navigate to repo root
+cd teamhub-api-claude-code
+
+# Start Claude Code
+claude
+
+# Run review on current changes or PR
+/review-small        # Quick 2-agent review for small changes
+/review-changes      # Comprehensive 7-agent review for complex changes
+/re-review          # Verify fixes after initial review
+```
+
+### Review Skills
+
+- **`/review-small`**: Streamlined 2-agent review (bug detection + CLAUDE.md compliance)
+  - Best for: Simple bug fixes, small features, documentation updates
+  - Agents: Bug detector + compliance checker
+
+- **`/review-changes`**: Comprehensive 7-agent review
+  - Best for: Complex features, architectural changes, security-sensitive code
+  - Agents: CLAUDE.md compliance (2x), bug detection (2x), plan compliance, comment quality, test coverage
+
+- **`/re-review`**: Follow-up verification
+  - Best for: After fixing issues from initial review
+  - Validates fixes and scans for regressions
+
+See `.claude/skills/README.md` for detailed skill documentation.
+
+### Understanding Review Output
+
+Claude categorizes issues by severity:
+- **Critical**: Security vulnerabilities, data loss risks
+- **High**: Logic bugs that break functionality, performance bottlenecks
+- **Medium**: Maintainability concerns, code quality issues
+- **Low**: Style suggestions, minor improvements
+
+See `CLAUDE.md` for project architecture and patterns Claude uses for context.
+
 ## Contributing
 
 1. Create a feature branch from `main`
