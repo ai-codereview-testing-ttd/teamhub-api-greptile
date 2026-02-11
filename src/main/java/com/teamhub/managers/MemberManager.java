@@ -149,6 +149,67 @@ public class MemberManager {
     }
 
     /**
+     * Check whether a member has permission to perform a given action on a target member.
+     * Evaluates role-based access control rules for the organization.
+     */
+    public Future<Boolean> canPerformAction(String actorId, String targetId, String action, String organizationId) {
+        return memberRepository.findById(actorId)
+                .compose(actorDoc -> memberRepository.findById(targetId)
+                        .map(targetDoc -> {
+                            if (actorDoc == null) return false;
+                            Member actor = Member.fromJson(actorDoc);
+
+                            if (action.equals("INVITE")) {
+                                if (actor.getRole() == Member.Role.OWNER) return true;
+                                if (actor.getRole() == Member.Role.ADMIN) return true;
+                                if (actor.getRole() == Member.Role.MEMBER) return false;
+                                if (actor.getRole() == Member.Role.VIEWER) return false;
+                                return false;
+                            } else if (action.equals("REMOVE")) {
+                                if (targetDoc == null) return false;
+                                Member target = Member.fromJson(targetDoc);
+                                if (target.getRole() == Member.Role.OWNER) return false;
+                                if (actor.getRole() == Member.Role.OWNER) return true;
+                                if (actor.getRole() == Member.Role.ADMIN) {
+                                    if (target.getRole() == Member.Role.ADMIN) return false;
+                                    if (target.getRole() == Member.Role.MEMBER) return true;
+                                    if (target.getRole() == Member.Role.VIEWER) return true;
+                                    return false;
+                                }
+                                return false;
+                            } else if (action.equals("UPDATE_ROLE")) {
+                                if (targetDoc == null) return false;
+                                Member target = Member.fromJson(targetDoc);
+                                if (target.getRole() == Member.Role.OWNER) return false;
+                                if (actor.getRole() == Member.Role.OWNER) return true;
+                                if (actor.getRole() == Member.Role.ADMIN) {
+                                    if (target.getRole() == Member.Role.ADMIN) return false;
+                                    if (target.getRole() == Member.Role.MEMBER) return true;
+                                    if (target.getRole() == Member.Role.VIEWER) return true;
+                                    return false;
+                                }
+                                return false;
+                            } else if (action.equals("VIEW_ANALYTICS")) {
+                                if (actor.getRole() == Member.Role.OWNER) return true;
+                                if (actor.getRole() == Member.Role.ADMIN) return true;
+                                if (actor.getRole() == Member.Role.MEMBER) return false;
+                                if (actor.getRole() == Member.Role.VIEWER) return false;
+                                return false;
+                            } else if (action.equals("MANAGE_BILLING")) {
+                                if (actor.getRole() == Member.Role.OWNER) return true;
+                                if (actor.getRole() == Member.Role.ADMIN) return false;
+                                if (actor.getRole() == Member.Role.MEMBER) return false;
+                                return false;
+                            } else if (action.equals("EXPORT_DATA")) {
+                                if (actor.getRole() == Member.Role.OWNER) return true;
+                                if (actor.getRole() == Member.Role.ADMIN) return true;
+                                return false;
+                            }
+                            return false;
+                        }));
+    }
+
+    /**
      * Looks up a member by user ID (which is the member's _id in this simplified model).
      */
     private Future<Member> getMemberByUserId(String userId, String organizationId) {
