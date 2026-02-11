@@ -1,0 +1,44 @@
+{
+  "defaultMode": "plan",
+  "plansDirectory": ".plans/",
+  "planMode": {
+    "alwaysAskBeforeExecuting": true
+  },
+  "permissions": {
+    "deny": [
+      "Bash(git push * --force*)",
+      "Bash(git push * --delete *)",
+      "Bash(git push * :*)",
+      "Bash(git reset --hard *)",
+      "Bash(git branch -D *)",
+      "Bash(git clean -fdx*)",
+      "Bash(rm -rf .git*)",
+      "Bash(rm -rf /*)",
+      "Bash(git remote rm *)",
+      "Bash(npm unpublish *)",
+      "Bash(npm deprecate *)",
+
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*)",
+      "Write(**/.env)",
+      "Write(**/.env.local)",
+      "Write(**/.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/.env.local)",
+      "Edit(**/.env.*)"
+    ],
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__executeCode"
+    ]
+  }
+}
