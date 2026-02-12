@@ -24,11 +24,47 @@ public class TaskHandler {
 
     public void mount(Router router) {
         router.get("/tasks").handler(this::listTasks);
+        router.get("/tasks/filter").handler(this::filterTasks);
         router.get("/tasks/:id").handler(this::getTask);
         router.post("/tasks").handler(this::createTask);
         router.put("/tasks/:id").handler(this::updateTask);
         router.delete("/tasks/:id").handler(this::deleteTask);
         router.patch("/tasks/:id/status").handler(this::updateStatus);
+    }
+
+    /**
+     * Filter tasks by date range with pagination support.
+     */
+    private void filterTasks(RoutingContext ctx) {
+        String organizationId = ctx.get("organizationId");
+        String projectId = ctx.queryParams().get("projectId");
+        String startDate = ctx.queryParams().get("startDate");
+        String endDate = ctx.queryParams().get("endDate");
+
+        if (projectId == null || projectId.isBlank()) {
+            ctx.fail(new AppException(ErrorCode.BAD_REQUEST, "Query parameter 'projectId' is required"));
+            return;
+        }
+        if (startDate == null || endDate == null) {
+            ctx.fail(new AppException(ErrorCode.BAD_REQUEST, "Query parameters 'startDate' and 'endDate' are required"));
+            return;
+        }
+
+        int page = PaginationHelper.getPage(ctx);
+        int pageSize = PaginationHelper.getPageSize(ctx);
+        int skip = PaginationHelper.calculateSkip(page, pageSize);
+
+        taskManager.filterTasksByDateRange(projectId, startDate, endDate, organizationId, skip, pageSize)
+                .compose(tasks -> taskManager.countFilteredTasks(projectId, startDate, endDate)
+                        .map(total -> {
+                            JsonArray data = new JsonArray();
+                            tasks.forEach(t -> data.add(t.toJson()));
+                            return new JsonObject()
+                                    .put("data", data)
+                                    .put("pagination", PaginationHelper.buildFilteredPaginationMeta(page, pageSize, total));
+                        }))
+                .onSuccess(result -> sendJson(ctx, 200, result))
+                .onFailure(ctx::fail);
     }
 
     private void listTasks(RoutingContext ctx) {

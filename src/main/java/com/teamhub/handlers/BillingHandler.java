@@ -20,6 +20,7 @@ public class BillingHandler {
     public void mount(Router router) {
         router.get("/billing/plan").handler(this::getCurrentPlan);
         router.get("/billing/usage").handler(this::getUsage);
+        router.get("/billing/upgrade-check").handler(this::checkUpgrade);
     }
 
     private void getCurrentPlan(RoutingContext ctx) {
@@ -35,6 +36,15 @@ public class BillingHandler {
 
         billingManager.getUsage(organizationId)
                 .onSuccess(result -> sendJson(ctx, 200, result))
+                .onFailure(ctx::fail);
+    }
+
+    private void checkUpgrade(RoutingContext ctx) {
+        String organizationId = ctx.get("organizationId");
+
+        billingManager.shouldUpgradeTier(organizationId)
+                .onSuccess(shouldUpgrade -> sendJson(ctx, 200,
+                        new JsonObject().put("shouldUpgrade", shouldUpgrade)))
                 .onFailure(ctx::fail);
     }
 
