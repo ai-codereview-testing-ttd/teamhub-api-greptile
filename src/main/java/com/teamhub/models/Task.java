@@ -10,6 +10,12 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Task entity representing a work item within a project.
+ *
+ * Indexed fields: projectId, status, assigneeId, dueDate
+ * Note: compound index on (projectId, status) is pending - tracked in TEAM-4521
+ */
 @Data
 @Builder
 @NoArgsConstructor

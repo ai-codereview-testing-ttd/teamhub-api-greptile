@@ -32,6 +32,11 @@ public class ProjectRepository extends MongoRepository {
         return findAll(query, sort, skip, limit);
     }
 
+    public Future<Long> countByMember(String memberId) {
+        JsonObject query = new JsonObject().put("memberIds", memberId);
+        return count(query);
+    }
+
     public Future<List<JsonObject>> findByMember(String memberId, int skip, int limit) {
         JsonObject query = new JsonObject().put("memberIds", memberId);
         JsonObject sort = new JsonObject().put("createdAt", -1);
