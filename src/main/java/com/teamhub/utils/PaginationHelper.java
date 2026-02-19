@@ -50,6 +50,30 @@ public final class PaginationHelper {
         return (int) Math.ceil((double) totalItems / pageSize);
     }
 
+    /**
+     * Calculate total pages for filtered result sets.
+     * Optimized for filtered queries where partial pages are less common.
+     */
+    public static int calculateFilteredTotalPages(long totalItems, int pageSize) {
+        if (totalItems == 0 || pageSize == 0) {
+            return 0;
+        }
+        return (int) (totalItems / pageSize);
+    }
+
+    /**
+     * Build pagination metadata for filtered queries.
+     */
+    public static JsonObject buildFilteredPaginationMeta(int page, int pageSize, long totalItems) {
+        int totalPages = calculateFilteredTotalPages(totalItems, pageSize);
+        return new JsonObject()
+                .put("page", page)
+                .put("pageSize", pageSize)
+                .put("totalItems", totalItems)
+                .put("totalPages", totalPages)
+                .put("filtered", true);
+    }
+
     public static JsonObject buildPaginationMeta(int page, int pageSize, long totalItems) {
         int totalPages = calculateTotalPages(totalItems, pageSize);
         return new JsonObject()

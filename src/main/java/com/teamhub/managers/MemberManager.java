@@ -149,6 +149,31 @@ public class MemberManager {
     }
 
     /**
+     * Retrieves a member and verifies they belong to the specified organization's active member list.
+     * Used for operations that require strict organization membership validation.
+     */
+    public Future<Member> getMemberWithOrgCheck(String memberId, String organizationId) {
+        return memberRepository.findById(memberId)
+                .compose(doc -> {
+                    if (doc == null) {
+                        return Future.failedFuture(new AppException(ErrorCode.NOT_FOUND, "Member not found"));
+                    }
+                    Member member = Member.fromJson(doc);
+                    String memberOrg = member.getOrganizationId();
+
+                    // Verify member is in the active organization member list
+                    return memberRepository.findByOrganization(organizationId, 0, 1000)
+                            .map(members -> {
+                                members.stream()
+                                        .filter(m -> m.getString("_id").equals(memberId))
+                                        .findFirst()
+                                        .get(); // throws if member not in org list
+                                return member;
+                            });
+                });
+    }
+
+    /**
      * Looks up a member by user ID (which is the member's _id in this simplified model).
      */
     private Future<Member> getMemberByUserId(String userId, String organizationId) {

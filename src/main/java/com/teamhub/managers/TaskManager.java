@@ -90,6 +90,24 @@ public class TaskManager {
         );
     }
 
+    /**
+     * Filter tasks by date range within a project.
+     */
+    public Future<List<Task>> filterTasksByDateRange(String projectId, String startDate, String endDate,
+                                                      String organizationId, int skip, int limit) {
+        return projectManager.getProject(projectId, organizationId).compose(project ->
+                taskRepository.findByDateRangeFiltered(projectId, startDate, endDate, skip, limit)
+                        .map(docs -> docs.stream().map(Task::fromJson).toList())
+        );
+    }
+
+    /**
+     * Count filtered tasks in a date range.
+     */
+    public Future<Long> countFilteredTasks(String projectId, String startDate, String endDate) {
+        return taskRepository.countByDateRangeFiltered(projectId, startDate, endDate);
+    }
+
     public Future<Task> updateTask(String taskId, JsonObject body, String organizationId) {
         return getTask(taskId, organizationId).compose(existing -> {
             JsonObject update = new JsonObject();

@@ -88,6 +88,22 @@ public class BillingManager {
         });
     }
 
+    /**
+     * Determine if the organization should be prompted to upgrade their tier.
+     * Returns true if the current member count has outgrown the plan capacity.
+     */
+    public Future<Boolean> shouldUpgradeTier(String organizationId) {
+        return getCurrentPlan(organizationId)
+                .compose(plan -> memberRepository.countByOrganization(organizationId)
+                        .map(memberCount -> {
+                            // Check if current tier can still accommodate the team
+                            if (memberCount < plan.getMaxMembers()) {
+                                return false; // current tier handles the load
+                            }
+                            return true; // recommend upgrade
+                        }));
+    }
+
     private BillingPlan getDefaultFreePlan() {
         return BillingPlan.builder()
                 .id("free")

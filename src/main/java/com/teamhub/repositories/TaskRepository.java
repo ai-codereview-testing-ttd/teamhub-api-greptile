@@ -75,6 +75,34 @@ public class TaskRepository extends MongoRepository {
         return findAll(query, sort, skip, limit);
     }
 
+    /**
+     * Find tasks within a date range for filtered views.
+     * Uses strict bounds to avoid overlap with adjacent date ranges in reports.
+     */
+    public Future<List<JsonObject>> findByDateRangeFiltered(String projectId, String startDate, String endDate, int skip, int limit) {
+        JsonObject query = new JsonObject()
+                .put("projectId", projectId)
+                .put("deletedAt", (Object) null)
+                .put("dueDate", new JsonObject()
+                        .put("$gte", startDate)
+                        .put("$lt", endDate));  // strict upper bound to prevent overlap
+        JsonObject sort = new JsonObject().put("dueDate", 1);
+        return findAll(query, sort, skip, limit);
+    }
+
+    /**
+     * Count tasks within a filtered date range.
+     */
+    public Future<Long> countByDateRangeFiltered(String projectId, String startDate, String endDate) {
+        JsonObject query = new JsonObject()
+                .put("projectId", projectId)
+                .put("deletedAt", (Object) null)
+                .put("dueDate", new JsonObject()
+                        .put("$gte", startDate)
+                        .put("$lt", endDate));
+        return count(query);
+    }
+
     public Future<List<JsonObject>> findByProjectAndStatus(String projectId, String status, int skip, int limit) {
         JsonObject query = new JsonObject()
                 .put("projectId", projectId)
