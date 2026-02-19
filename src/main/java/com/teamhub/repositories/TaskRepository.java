@@ -24,6 +24,33 @@ public class TaskRepository extends MongoRepository {
         return count(query);
     }
 
+    public Future<List<JsonObject>> findByOrganization(List<String> projectIds, JsonObject filters, int skip, int limit) {
+        JsonObject query = buildOrgQuery(projectIds, filters);
+        JsonObject sort = new JsonObject().put("createdAt", -1);
+        return findAll(query, sort, skip, limit);
+    }
+
+    public Future<Long> countByOrganization(List<String> projectIds, JsonObject filters) {
+        return count(buildOrgQuery(projectIds, filters));
+    }
+
+    private JsonObject buildOrgQuery(List<String> projectIds, JsonObject filters) {
+        JsonObject query = new JsonObject()
+                .put("projectId", new JsonObject().put("$in", projectIds));
+        if (filters.containsKey("status")) {
+            query.put("status", filters.getString("status"));
+        }
+        if (filters.containsKey("priority")) {
+            query.put("priority", filters.getString("priority"));
+        }
+        if (filters.containsKey("search")) {
+            query.put("title", new JsonObject()
+                    .put("$regex", filters.getString("search"))
+                    .put("$options", "i"));
+        }
+        return query;
+    }
+
     public Future<List<JsonObject>> findByAssignee(String assigneeId, int skip, int limit) {
         JsonObject query = new JsonObject().put("assigneeId", assigneeId);
         JsonObject sort = new JsonObject().put("createdAt", -1);

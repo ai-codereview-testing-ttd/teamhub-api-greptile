@@ -35,17 +35,20 @@ public class TaskHandler {
         String organizationId = ctx.get("organizationId");
         String projectId = ctx.queryParams().get("projectId");
 
-        if (projectId == null || projectId.isBlank()) {
-            ctx.fail(new AppException(ErrorCode.BAD_REQUEST, "Query parameter 'projectId' is required"));
-            return;
-        }
-
         int page = PaginationHelper.getPage(ctx);
         int pageSize = PaginationHelper.getPageSize(ctx);
         int skip = PaginationHelper.calculateSkip(page, pageSize);
 
-        taskManager.listTasks(projectId, organizationId, skip, pageSize).compose(tasks ->
-                taskManager.countTasks(projectId).map(total -> {
+        JsonObject filters = new JsonObject();
+        String status = ctx.queryParams().get("status");
+        String priority = ctx.queryParams().get("priority");
+        String search = ctx.queryParams().get("search");
+        if (status != null) filters.put("status", status);
+        if (priority != null) filters.put("priority", priority);
+        if (search != null) filters.put("search", search);
+
+        taskManager.listTasks(projectId, organizationId, filters, skip, pageSize).compose(tasks ->
+                taskManager.countTasks(projectId, organizationId, filters).map(total -> {
                     JsonArray data = new JsonArray();
                     tasks.forEach(t -> data.add(t.toJson()));
                     return new JsonObject()

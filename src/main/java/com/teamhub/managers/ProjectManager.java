@@ -77,6 +77,11 @@ public class ProjectManager {
         return projectRepository.countByOrganization(organizationId);
     }
 
+    public Future<List<String>> getProjectIds(String organizationId) {
+        return projectRepository.findByOrganization(organizationId, 0, 1000)
+                .map(docs -> docs.stream().map(doc -> doc.getString("_id")).toList());
+    }
+
     public Future<Project> updateProject(String projectId, JsonObject body, String organizationId) {
         return getProject(projectId, organizationId).compose(existing -> {
             JsonObject update = new JsonObject();

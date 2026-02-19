@@ -2,7 +2,6 @@ package com.teamhub.managers;
 
 import com.teamhub.common.AppException;
 import com.teamhub.common.ErrorCode;
-import com.teamhub.models.Project;
 import com.teamhub.models.Task;
 import com.teamhub.repositories.TaskRepository;
 import io.vertx.core.Future;
@@ -69,16 +68,26 @@ public class TaskManager {
         });
     }
 
-    public Future<List<Task>> listTasks(String projectId, String organizationId, int skip, int limit) {
-        // Verify project belongs to the org
-        return projectManager.getProject(projectId, organizationId).compose(project ->
-                taskRepository.findByProject(projectId, skip, limit)
+    public Future<List<Task>> listTasks(String projectId, String organizationId, JsonObject filters, int skip, int limit) {
+        if (projectId != null && !projectId.isBlank()) {
+            return projectManager.getProject(projectId, organizationId).compose(project ->
+                    taskRepository.findByProject(projectId, skip, limit)
+                            .map(docs -> docs.stream().map(Task::fromJson).toList())
+            );
+        }
+        return projectManager.getProjectIds(organizationId).compose(projectIds ->
+                taskRepository.findByOrganization(projectIds, filters, skip, limit)
                         .map(docs -> docs.stream().map(Task::fromJson).toList())
         );
     }
 
-    public Future<Long> countTasks(String projectId) {
-        return taskRepository.countByProject(projectId);
+    public Future<Long> countTasks(String projectId, String organizationId, JsonObject filters) {
+        if (projectId != null && !projectId.isBlank()) {
+            return taskRepository.countByProject(projectId);
+        }
+        return projectManager.getProjectIds(organizationId).compose(projectIds ->
+                taskRepository.countByOrganization(projectIds, filters)
+        );
     }
 
     public Future<Task> updateTask(String taskId, JsonObject body, String organizationId) {
