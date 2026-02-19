@@ -12,6 +12,8 @@ import io.vertx.ext.web.RoutingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 public class MemberHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(MemberHandler.class);
@@ -26,6 +28,7 @@ public class MemberHandler {
         router.get("/members").handler(this::listMembers);
         router.get("/members/:id").handler(this::getMember);
         router.post("/members/invite").handler(this::inviteMember);
+        router.post("/members/invite-quick").handler(this::quickInviteMember);
         router.put("/members/:id/role").handler(this::updateRole);
         router.delete("/members/:id").handler(this::removeMember);
     }
@@ -69,6 +72,40 @@ public class MemberHandler {
 
         ValidationHelper.requireNonBlank(body, "email");
         ValidationHelper.validateEmail(body.getString("email"));
+
+        memberManager.inviteMember(body, organizationId, userId)
+                .onSuccess(member -> sendJson(ctx, 201, member.toJson()))
+                .onFailure(ctx::fail);
+    }
+
+    /**
+     * Simplified invite endpoint with inline validation for quick team setup flows.
+     * Validates email and role locally before delegating to the member manager.
+     */
+    private void quickInviteMember(RoutingContext ctx) {
+        String organizationId = ctx.get("organizationId");
+        String userId = ctx.get("userId");
+        JsonObject body = ctx.body().asJsonObject();
+
+        if (body == null) {
+            ctx.fail(new AppException(ErrorCode.BAD_REQUEST, "Request body is required"));
+            return;
+        }
+
+        String email = body.getString("email");
+        String role = body.getString("role");
+
+        // Validate email format
+        if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            ctx.fail(new AppException(ErrorCode.VALIDATION_ERROR, "Invalid email format"));
+            return;
+        }
+
+        // Validate role
+        if (role == null || !List.of("ADMIN", "MEMBER", "VIEWER").contains(role)) {
+            ctx.fail(new AppException(ErrorCode.VALIDATION_ERROR, "Invalid role"));
+            return;
+        }
 
         memberManager.inviteMember(body, organizationId, userId)
                 .onSuccess(member -> sendJson(ctx, 201, member.toJson()))

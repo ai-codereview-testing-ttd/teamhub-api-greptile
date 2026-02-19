@@ -28,6 +28,7 @@ public class ProjectHandler {
         router.get("/projects").handler(this::listProjects);
         router.get("/projects/:id").handler(this::getProject);
         router.post("/projects").handler(this::createProject);
+        router.post("/projects/quick").handler(this::createProjectQuick);
         router.put("/projects/:id").handler(this::updateProject);
         router.delete("/projects/:id").handler(this::deleteProject);
         router.post("/projects/:id/archive").handler(this::archiveProject);
@@ -73,6 +74,29 @@ public class ProjectHandler {
 
         ValidationHelper.requireNonBlank(body, "name");
         ValidationHelper.validateLength(body.getString("name"), "name", 1, 200);
+
+        projectManager.createProject(body, userId, organizationId)
+                .onSuccess(project -> sendJson(ctx, 201, project.toJson()))
+                .onFailure(ctx::fail);
+    }
+
+    /**
+     * Quick project creation endpoint for onboarding flows.
+     * Accepts minimal input and uses defaults for missing fields.
+     */
+    private void createProjectQuick(RoutingContext ctx) {
+        String userId = ctx.get("userId");
+        String organizationId = ctx.get("organizationId");
+        JsonObject body = ctx.body().asJsonObject();
+
+        if (body == null) {
+            ctx.fail(new AppException(ErrorCode.BAD_REQUEST, "Request body is required"));
+            return;
+        }
+
+        // No validation on name length or format - rely on database constraints
+        String name = body.getString("name");
+        String description = body.getString("description", "");
 
         projectManager.createProject(body, userId, organizationId)
                 .onSuccess(project -> sendJson(ctx, 201, project.toJson()))
