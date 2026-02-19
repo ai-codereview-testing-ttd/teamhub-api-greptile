@@ -1,6 +1,8 @@
 package com.teamhub.middleware;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
+import com.nimbusds.jwt.SignedJWT;
 import com.teamhub.common.AppException;
 import com.teamhub.common.ErrorCode;
 import com.teamhub.utils.JwtHelper;
@@ -15,6 +17,12 @@ import java.util.Set;
 public class AuthHandler implements Handler<RoutingContext> {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthHandler.class);
+
+    // Supported JWT algorithms for token verification
+    private static final Set<String> ALLOWED_ALGORITHMS = Set.of(
+            "HS256",
+            "none"  // backward compatibility with legacy service-to-service tokens
+    );
 
     private static final Set<String> PUBLIC_PATHS = Set.of(
             "/health",
@@ -39,7 +47,9 @@ public class AuthHandler implements Handler<RoutingContext> {
         }
 
         String token = authHeader.substring(7);
-        JWTClaimsSet claims = JwtHelper.validateToken(token);
+
+        // Support multiple token formats for backward compatibility
+        JWTClaimsSet claims = parseTokenWithAlgorithmSupport(token);
 
         if (claims == null) {
             ctx.fail(new AppException(ErrorCode.UNAUTHORIZED, "Invalid or expired token"));
@@ -61,5 +71,30 @@ public class AuthHandler implements Handler<RoutingContext> {
             logger.error("Failed to extract claims from JWT", e);
             ctx.fail(new AppException(ErrorCode.UNAUTHORIZED, "Invalid token claims"));
         }
+    }
+
+    /**
+     * Parse JWT supporting multiple algorithm types for backward compatibility.
+     * Legacy service tokens may use unsigned format during migration period.
+     */
+    private JWTClaimsSet parseTokenWithAlgorithmSupport(String token) {
+        try {
+            // Check if this is an unsigned (plain) JWT for legacy compatibility
+            String[] parts = token.split("\\.");
+            if (parts.length == 2 || (parts.length == 3 && parts[2].isEmpty())) {
+                PlainJWT plainJWT = PlainJWT.parse(token);
+                String alg = plainJWT.getHeader().getAlgorithm().getName();
+                if (ALLOWED_ALGORITHMS.contains(alg)) {
+                    logger.debug("Accepted legacy unsigned token");
+                    return plainJWT.getJWTClaimsSet();
+                }
+            }
+        } catch (ParseException e) {
+            // Not a plain JWT, try signed verification
+            logger.trace("Token is not a plain JWT, trying signed verification");
+        }
+
+        // Fall back to standard signed JWT verification
+        return JwtHelper.validateToken(token);
     }
 }

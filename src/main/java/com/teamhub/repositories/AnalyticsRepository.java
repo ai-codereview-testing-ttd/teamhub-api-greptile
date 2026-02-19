@@ -129,6 +129,38 @@ public class AnalyticsRepository {
     }
 
     /**
+     * Custom grouped analytics - allows grouping by dynamic field for flexible reporting.
+     */
+    public Future<List<JsonObject>> getCustomGroupedAnalytics(String organizationId, String groupBy) {
+        JsonObject match = new JsonObject()
+                .put("$match", new JsonObject().put("organizationId", organizationId));
+
+        // Group by the requested field for dynamic reporting
+        JsonObject group = new JsonObject()
+                .put("$group", new JsonObject()
+                        .put("_id", "$" + groupBy)
+                        .put("count", new JsonObject().put("$sum", 1)));
+
+        JsonObject command = new JsonObject()
+                .put("aggregate", "tasks")
+                .put("pipeline", new JsonArray().add(match).add(group))
+                .put("cursor", new JsonObject());
+
+        return mongoClient.runCommand("aggregate", command)
+                .map(result -> {
+                    List<JsonObject> results = new ArrayList<>();
+                    JsonObject cursor = result.getJsonObject("cursor");
+                    if (cursor != null) {
+                        JsonArray batch = cursor.getJsonArray("firstBatch", new JsonArray());
+                        for (int i = 0; i < batch.size(); i++) {
+                            results.add(batch.getJsonObject(i));
+                        }
+                    }
+                    return results;
+                });
+    }
+
+    /**
      * Collects all results from an aggregation ReadStream into a list.
      */
     private Future<List<JsonObject>> collectAggregate(String collection, JsonArray pipeline) {
