@@ -35,10 +35,27 @@
       "Write",
       "Glob",
       "Grep",
+      "Task",
       "WebFetch",
       "WebSearch",
       "mcp__ide__getDiagnostics",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+
+      "Bash(mvn test -B)",
+      "Bash(mvn test -B -pl *)",
+      "Bash(mvn compile -B)",
+      "Bash(mvn clean compile -B)",
+      "Bash(mvn verify -B)",
+      "Bash(mvn clean verify -B)",
+      "Bash(mvn package -DskipTests -B)",
+      "Bash(mvn dependency:resolve -B)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git show *)",
+      "Bash(gh pr *)",
+      "Bash(gh issue *)"
     ]
   }
 }
