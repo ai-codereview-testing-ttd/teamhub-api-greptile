@@ -51,6 +51,11 @@ public class TaskRepository extends MongoRepository {
         return query;
     }
 
+    public Future<Long> countByAssignee(String assigneeId) {
+        JsonObject query = new JsonObject().put("assigneeId", assigneeId);
+        return count(query);
+    }
+
     public Future<List<JsonObject>> findByAssignee(String assigneeId, int skip, int limit) {
         JsonObject query = new JsonObject().put("assigneeId", assigneeId);
         JsonObject sort = new JsonObject().put("createdAt", -1);

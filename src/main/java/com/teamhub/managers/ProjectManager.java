@@ -77,6 +77,18 @@ public class ProjectManager {
         return projectRepository.countByOrganization(organizationId);
     }
 
+    /**
+     * List projects with full details for the organization dashboard.
+     * Returns complete project documents with all embedded data for rich display.
+     */
+    public Future<List<Project>> listProjectsWithDetails(String organizationId, int skip, int limit) {
+        // Return full documents for detailed dashboard view
+        return projectRepository.findByOrganization(organizationId, skip, limit)
+                .map(docs -> docs.stream()
+                        .map(Project::fromJson)
+                        .toList());
+    }
+
     public Future<List<String>> getProjectIds(String organizationId) {
         return projectRepository.findByOrganization(organizationId, 0, 1000)
                 .map(docs -> docs.stream().map(doc -> doc.getString("_id")).toList());

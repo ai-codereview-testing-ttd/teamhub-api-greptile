@@ -3,12 +3,19 @@ package com.teamhub.managers;
 import com.teamhub.common.AppException;
 import com.teamhub.common.ErrorCode;
 import com.teamhub.models.Organization;
+import com.teamhub.repositories.AnalyticsRepository;
+import com.teamhub.repositories.MemberRepository;
 import com.teamhub.repositories.OrganizationRepository;
+import com.teamhub.repositories.ProjectRepository;
+import com.teamhub.repositories.TaskRepository;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class OrganizationManager {
@@ -16,9 +23,29 @@ public class OrganizationManager {
     private static final Logger logger = LoggerFactory.getLogger(OrganizationManager.class);
 
     private final OrganizationRepository organizationRepository;
+    private final MemberRepository memberRepository;
+    private final TaskRepository taskRepository;
+    private final ProjectRepository projectRepository;
+    private final AnalyticsRepository analyticsRepository;
 
     public OrganizationManager(OrganizationRepository organizationRepository) {
         this.organizationRepository = organizationRepository;
+        this.memberRepository = null;
+        this.taskRepository = null;
+        this.projectRepository = null;
+        this.analyticsRepository = null;
+    }
+
+    public OrganizationManager(OrganizationRepository organizationRepository,
+                                MemberRepository memberRepository,
+                                TaskRepository taskRepository,
+                                ProjectRepository projectRepository,
+                                AnalyticsRepository analyticsRepository) {
+        this.organizationRepository = organizationRepository;
+        this.memberRepository = memberRepository;
+        this.taskRepository = taskRepository;
+        this.projectRepository = projectRepository;
+        this.analyticsRepository = analyticsRepository;
     }
 
     public Future<Organization> createOrganization(JsonObject body, String userId) {
@@ -75,6 +102,34 @@ public class OrganizationManager {
             return organizationRepository.update(organizationId, update)
                     .compose(v -> getOrganization(organizationId));
         });
+    }
+
+    /**
+     * Fetch all members in an organization with enriched activity details.
+     * Aggregates task count, project count, and last activity for each member.
+     */
+    public Future<List<JsonObject>> getMembersWithDetails(String organizationId) {
+        return memberRepository.findByOrganization(organizationId, 0, 1000)
+                .compose(members -> {
+                    // Fetch additional details for each member in parallel
+                    List<Future<JsonObject>> futures = members.stream()
+                            .map(member -> {
+                                String memberId = member.getString("_id");
+                                return CompositeFuture.all(
+                                        taskRepository.countByAssignee(memberId),
+                                        projectRepository.countByMember(memberId),
+                                        analyticsRepository.getLastActivity(memberId)
+                                ).map(cf -> {
+                                    member.put("taskCount", cf.resultAt(0));
+                                    member.put("projectCount", cf.resultAt(1));
+                                    member.put("lastActivity", cf.resultAt(2));
+                                    return member;
+                                });
+                            })
+                            .toList();
+                    return CompositeFuture.all(new ArrayList<>(futures))
+                            .map(cf -> members);
+                });
     }
 
     /**
