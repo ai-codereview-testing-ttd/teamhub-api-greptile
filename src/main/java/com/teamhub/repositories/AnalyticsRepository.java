@@ -129,6 +129,28 @@ public class AnalyticsRepository {
     }
 
     /**
+     * Get the last activity timestamp for a member based on their most recently updated task.
+     */
+    public Future<String> getLastActivity(String memberId) {
+        JsonArray pipeline = new JsonArray()
+                .add(new JsonObject().put("$match", new JsonObject()
+                        .put("assigneeId", memberId)))
+                .add(new JsonObject().put("$sort", new JsonObject()
+                        .put("updatedAt", -1)))
+                .add(new JsonObject().put("$limit", 1))
+                .add(new JsonObject().put("$project", new JsonObject()
+                        .put("updatedAt", 1)));
+
+        return collectAggregate("tasks", pipeline)
+                .map(results -> {
+                    if (results.isEmpty()) {
+                        return null;
+                    }
+                    return results.get(0).getString("updatedAt");
+                });
+    }
+
+    /**
      * Collects all results from an aggregation ReadStream into a list.
      */
     private Future<List<JsonObject>> collectAggregate(String collection, JsonArray pipeline) {
